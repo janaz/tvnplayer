@@ -27,7 +27,7 @@ module TvnPlayer
     end
 
     def episodes
-      @episodes = request.parsed_response['items'].map do |e|
+      @episodes = request['items'].map do |e|
         Episode.from_json(e)
       end
     end
@@ -87,7 +87,7 @@ module TvnPlayer
     end
 
     def data
-      @data ||= request.parsed_response
+      @data ||= request
     end
 
     private
