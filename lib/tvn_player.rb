@@ -12,7 +12,7 @@ module TvnPlayer
       :authKey => 'ba786b315508f0920eca1c34d65534cd',
       :m => 'getItems',
   }
-  LOCAL_IP = '0.0.0.0'
+  PL_IP = '192.168.3.12'
 
   class Series
     class << self
@@ -27,16 +27,29 @@ module TvnPlayer
     end
 
     def episodes
-      @episodes = request['items'].map do |e|
+      @episodes ||= request['items'].map do |e|
         Episode.from_json(e)
       end
+    end
+
+    def download!(destination)
+      episodes.each do |e| 
+        begin
+          filename = File.join(destination, e.file_name)
+          unless File.exists?(filename)
+            puts "Downloading #{e.file_name} from #{e.stream_url}"
+            system("curl -vvv --trace-time -L -o #{Shellwords.escape(filename)} #{Shellwords.escape(e.stream_url)}")
+          end
+        rescue
+        end	   
+      end 
     end
 
     private
 
     def request
       c = HTTPClient.new
-      c.socket_local=HTTPClient::Site.new(URI("tcp://#{LOCAL_IP}:0"))
+      c.socket_local=HTTPClient::Site.new(URI("tcp://#{PL_IP}:0"))
       resp = c.get(API_URL, req_options[:query], req_options[:headers])
       JSON.parse(resp.body)
     end
@@ -74,9 +87,6 @@ module TvnPlayer
       @title = json['title']
     end
 
-    def url
-
-    end
 
     def name
       "#{@title.titleize}.S%02dE%02d".gsub(' ','.') % [@season_id, @episode_in_season]
@@ -86,8 +96,31 @@ module TvnPlayer
       "#{name}.mp4"
     end
 
+    def variants
+      data['item']['videos']['main']['video_content']
+    end
+
+    def variant(quality)
+      variants.select{|v| v['profile_name'] == quality}.first
+    end
+
     def data
       @data ||= request
+    end
+
+    def hq_url
+      bestq = ["Bardzo wysoka", "Wysoka", "Standard"].find{|q| variant(q)}
+      variant(bestq)['url'] if bestq
+    end
+
+    def stream_url
+      return unless hq_url
+      @stream_url ||= begin
+        c = HTTPClient.new
+        c.socket_local=HTTPClient::Site.new(URI("tcp://#{PL_IP}:0"))
+        resp = c.get(hq_url, nil, req_options[:headers])
+        resp.body
+      end
     end
 
     private
@@ -95,7 +128,7 @@ module TvnPlayer
 
     def request
       c = HTTPClient.new
-      c.socket_local=HTTPClient::Site.new(URI("tcp://#{LOCAL_IP}:0"))
+      c.socket_local=HTTPClient::Site.new(URI("tcp://#{PL_IP}:0"))
       resp = c.get(API_URL, req_options[:query], req_options[:headers])
       JSON.parse(resp.body)
     end
