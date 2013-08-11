@@ -12,12 +12,25 @@ module TvnPlayer
       :authKey => 'ba786b315508f0920eca1c34d65534cd',
       :m => 'getItems',
   }
-  PL_IP = '192.168.3.12'
+
+  PL_IP = ENV.fetch('PL_IP') { '0.0.0.0' }
 
   class Series
     class << self
       def kuchenne_rewolucje(season_id)
         Series.new(114, season_id)
+      end
+
+      def fakty_tvn(season_id)
+        Series.new(516, season_id)
+      end
+
+      def co_za_tydzien(season_id)
+        Series.new(1199, season_id)
+      end
+
+      def ramowka(season_id)
+        Series.new(1343, season_id)
       end
     end
 
@@ -33,16 +46,11 @@ module TvnPlayer
     end
 
     def download!(destination)
-      episodes.each do |e| 
-        begin
-          filename = File.join(destination, e.file_name)
-          unless File.exists?(filename)
-            puts "Downloading #{e.file_name} from #{e.stream_url}"
-            system("curl -vvv --trace-time -L -o #{Shellwords.escape(filename)} #{Shellwords.escape(e.stream_url)}")
-          end
-        rescue
-        end	   
-      end 
+      begin
+        episodes.each { |e| e.download!(destination) }
+      rescue => e
+        puts e.inspect
+      end
     end
 
     private
@@ -87,9 +95,18 @@ module TvnPlayer
       @title = json['title']
     end
 
+    def download!(destination)
+      filename = File.join(destination, file_name)
+      if File.exists?(filename)
+        puts "Episode #{file_name} already exists. Skipping..."
+      else
+        puts "Downloading #{file_name} from #{stream_url}"
+        system("curl -vvv --trace-time -L -o #{Shellwords.escape(filename)} #{Shellwords.escape(stream_url)}")
+      end
+    end
 
     def name
-      "#{@title.titleize}.S%02dE%02d".gsub(' ','.') % [@season_id, @episode_in_season]
+      "#{@title.titleize}.S%02dE%02d".gsub(' ', '.') % [@season_id, @episode_in_season]
     end
 
     def file_name
@@ -101,7 +118,7 @@ module TvnPlayer
     end
 
     def variant(quality)
-      variants.select{|v| v['profile_name'] == quality}.first
+      variants.select { |v| v['profile_name'] == quality }.first
     end
 
     def data
@@ -109,7 +126,7 @@ module TvnPlayer
     end
 
     def hq_url
-      bestq = ["Bardzo wysoka", "Wysoka", "Standard"].find{|q| variant(q)}
+      bestq = ["Bardzo wysoka", "Wysoka", "Standard"].find { |q| variant(q) }
       variant(bestq)['url'] if bestq
     end
 
