@@ -1,6 +1,7 @@
 require 'httpclient'
 require 'active_support/core_ext'
 require 'json'
+require 'shellwords'
 
 module TvnPlayer
   API_URL = "https://api.tvnplayer.pl/api/"
@@ -50,6 +51,7 @@ module TvnPlayer
         episodes.each { |e| e.download!(destination) }
       rescue => e
         puts e.inspect
+        puts e.backtrace
       end
     end
 
@@ -57,7 +59,9 @@ module TvnPlayer
 
     def request
       c = HTTPClient.new
-      c.socket_local=HTTPClient::Site.new(URI("tcp://#{PL_IP}:0"))
+      socket = HTTPClient::Site.new(URI("tcp://#{PL_IP}:0"))
+      puts socket.inspect
+      c.socket_local=socket
       resp = c.get(API_URL, req_options[:query], req_options[:headers])
       JSON.parse(resp.body)
     end
@@ -101,7 +105,11 @@ module TvnPlayer
         puts "Episode #{file_name} already exists. Skipping..."
       else
         puts "Downloading #{file_name} from #{stream_url}"
-        system("curl -vvv --trace-time -L -o #{Shellwords.escape(filename)} #{Shellwords.escape(stream_url)}")
+        if File.exists?(filename)
+          puts "Episode #{file_name} already exists. Skipping..."
+        else
+          system("curl -vvv --trace-time -L -o #{::Shellwords.escape(filename)} #{::Shellwords.escape(stream_url)}")
+        end
       end
     end
 
