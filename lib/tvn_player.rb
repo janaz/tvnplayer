@@ -27,7 +27,7 @@ module TvnPlayer
       end
 
       def kuba_wojewodzki(season_id)
-        Series.new(34664, season_id)
+        Series.new(2497, season_id)
       end
 
       def co_za_tydzien(season_id)
