@@ -26,6 +26,10 @@ module TvnPlayer
         Series.new(516, season_id)
       end
 
+      def kuba_wojewodzki(season_id)
+        Series.new(34664, season_id)
+      end
+
       def co_za_tydzien(season_id)
         Series.new(1199, season_id)
       end
@@ -135,7 +139,7 @@ module TvnPlayer
 
     def hq_url
       bestq = ["Bardzo wysoka", "Wysoka", "Standard"].find { |q| variant(q) }
-      variant(bestq)['url'] if bestq
+      variant(bestq)['url'].gsub('tvnplayer.pl', 'player.pl') if bestq
     end
 
     def stream_url
